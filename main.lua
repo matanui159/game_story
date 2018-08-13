@@ -1,7 +1,11 @@
-local font = require("font")
+Object = require("classic")
+
+local Font = require("Font")
+
+local font
 
 function love.load()
-	font = font.new(50, 2, 20, 0.2)
+	font = Font(50, 2, 0.2)
 end
 
 function love.update(dt)
@@ -9,7 +13,7 @@ function love.update(dt)
 end
 
 function love.draw()
-	font:beginDraw()
-	love.graphics.printf("Bittersweet is a weird\nlimbo of a feeling", 0, 100, love.graphics.getWidth(), "center")
-	font:endDraw()
+	font:preDraw()
+	love.graphics.printf("This is some text", 0, 100, love.graphics.getWidth(), "center")
+	font:postDraw()
 end

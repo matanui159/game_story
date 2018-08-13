@@ -1,62 +1,42 @@
-local font = {}
-font.__index = font
+local Font = Object:extend()
 
-function font.new(size, offset, div, clock)
-	local obj = setmetatable({
-		font = love.graphics.newFont("assets/IndieFlower.ttf", size),
-		canvas = love.graphics.newCanvas(),
-		shader = love.graphics.newShader([[
-			extern Image noise;
-			extern vec2 offset;
+function Font:new(size, offset, clock)
+	self.font = love.graphics.newFont("assets/IndieFlower.ttf", size)
+	self.shader = love.graphics.newShader([[
+		varying float random;
+
+		#ifdef VERTEX
+			extern float seed;
+			extern float offset;
+
+			vec4 position(mat4 matrix, vec4 vertex) {
+				random = fract(sin(dot(vertex.xy, vec2(12.3, 45.6)) + seed) * 78910.11);
+				float angle = random * 6.2832;
+				return matrix * (vertex + vec4(cos(angle), sin(angle), 0.0, 0.0) * offset);
+			}
+		#endif
+
+		#ifdef PIXEL
+			extern vec4 color1;
+			extern vec4 color2;
 
 			vec4 effect(vec4 color, Image image, vec2 coord, vec2 pos) {
-				return Texel(image, coord + offset * (Texel(noise, coord).rg * 2.0 + 1.0));
+				return Texel(image, coord) * mix(color1, color2, random);
 			}
-		]]),
-
-		noise = {
-			canvas = love.graphics.newCanvas(
-				love.graphics.getWidth() / div,
-				love.graphics.getHeight() / div
-			),
-			shader = love.graphics.newShader([[
-				extern vec2 offset;
-
-				float random(vec2 pos, float ox, float oy) {
-					return fract(sin(dot(pos + vec2(ox, oy), vec2(12.3, 45.6))) * 78910.11);
-				}
-
-				vec4 effect(vec4 color, Image image, vec2 coord, vec2 pos) {
-					return vec4(random(pos, offset.x, 0.0), random(pos, 0.0, offset.y), 0.0, 1.0);
-				}
-			]])
-		},
-
-		clock = clock,
-		timer = clock
-	}, font)
-
-	obj.shader:send("noise", obj.noise.canvas)
-	obj.shader:send("offset", {
-		offset / love.graphics.getWidth(),
-		offset / love.graphics.getHeight()
-	})
+		#endif
+	]])
+	self.shader:send("offset", offset)
+	self.shader:send("color1", {1, 1, 1, 0.5})
+	self.shader:send("color2", {1, 1, 1, 1})
+	self.clock = clock
+	self.timer = clock
 	return obj
 end
 
-function font:update(dt)
+function Font:update(dt)
 	self.timer = self.timer + dt
 	if self.timer >= self.clock then
-		love.graphics.setCanvas(self.noise.canvas)
-		love.graphics.setShader(self.noise.shader)
-		self.noise.shader:send("offset", {math.random(), math.random()})
-		love.graphics.rectangle("fill", 0, 0,
-			self.noise.canvas:getWidth(),
-			self.noise.canvas:getHeight()
-		)
-		love.graphics.setShader()
-		love.graphics.setCanvas()
-
+		self.shader:send("seed", math.random())
 		if self.clock == 0 then
 			self.timer = 0
 		else
@@ -65,18 +45,13 @@ function font:update(dt)
 	end
 end
 
-function font:beginDraw()
-	love.graphics.setCanvas(self.canvas)
-	love.graphics.clear()
+function Font:preDraw()
 	love.graphics.setFont(self.font)
-end
-
-function font:endDraw()
-	love.graphics.setCanvas()
 	love.graphics.setShader(self.shader)
-	love.graphics.draw(self.canvas)
-	love.graphics.setShader()
-	-- love.graphics.draw(self.noise.canvas)
 end
 
-return font
+function Font:postDraw()
+	love.graphics.setShader()
+end
+
+return Font
