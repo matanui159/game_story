@@ -1,6 +1,6 @@
 local Font = Object:extend()
 
-function Font:new(size, offset, clock)
+function Font:new(size, offset, tint, clock)
 	self.font = love.graphics.newFont("assets/IndieFlower.ttf", size)
 	self.shader = love.graphics.newShader([[
 		varying float random;
@@ -17,17 +17,15 @@ function Font:new(size, offset, clock)
 		#endif
 
 		#ifdef PIXEL
-			extern vec4 color1;
-			extern vec4 color2;
+			extern vec4 tint;
 
 			vec4 effect(vec4 color, Image image, vec2 coord, vec2 pos) {
-				return Texel(image, coord) * mix(color1, color2, random);
+				return Texel(image, coord) * (color + tint * random);
 			}
 		#endif
 	]])
 	self.shader:send("offset", offset)
-	self.shader:send("color1", {1, 1, 1, 0.5})
-	self.shader:send("color2", {1, 1, 1, 1})
+	self.shader:send("tint", tint)
 	self.clock = clock
 	self.timer = clock
 	return obj
