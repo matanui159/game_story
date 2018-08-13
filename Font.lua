@@ -1,40 +1,36 @@
 local Font = Object:extend()
+Font.sizes = {}
 
-function Font:new(size, offset, tint, clock)
-	self.font = love.graphics.newFont("assets/IndieFlower.ttf", size)
-	self.shader = love.graphics.newShader([[
-		varying float random;
-
-		#ifdef VERTEX
+function Font:new(size, offset, clock)
+	if not Font.shader then
+		Font.shader = love.graphics.newShader([[
 			extern float seed;
 			extern float offset;
 
 			vec4 position(mat4 matrix, vec4 vertex) {
-				random = fract(sin(dot(vertex.xy, vec2(12.3, 45.6)) + seed) * 78910.11);
+				float random = fract(sin(dot(vertex.xy, vec2(12.3, 45.6)) + seed) * 78910.11);
 				float angle = random * 6.2832;
 				return matrix * (vertex + vec4(cos(angle), sin(angle), 0.0, 0.0) * offset);
 			}
-		#endif
+		]])
+	end
+	if not Font.sizes[size] then
+		print("FONT LOADED:", size)
+		Font.sizes[size] = love.graphics.newFont("assets/IndieFlower.ttf", size)
+	end
 
-		#ifdef PIXEL
-			extern vec4 tint;
-
-			vec4 effect(vec4 color, Image image, vec2 coord, vec2 pos) {
-				return Texel(image, coord) * (color + tint * random);
-			}
-		#endif
-	]])
-	self.shader:send("offset", offset)
-	self.shader:send("tint", tint)
+	self.size = size
+	self.font = Font.sizes[size]
+	self.seed = 0
+	self.offset = offset
 	self.clock = clock
 	self.timer = clock
-	return obj
 end
 
 function Font:update(dt)
 	self.timer = self.timer + dt
 	if self.timer >= self.clock then
-		self.shader:send("seed", math.random())
+		self.seed = math.random()
 		if self.clock == 0 then
 			self.timer = 0
 		else
@@ -45,7 +41,9 @@ end
 
 function Font:preDraw()
 	love.graphics.setFont(self.font)
-	love.graphics.setShader(self.shader)
+	love.graphics.setShader(Font.shader)
+	Font.shader:send("seed", self.seed)
+	Font.shader:send("offset", self.offset)
 end
 
 function Font:postDraw()
