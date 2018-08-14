@@ -2,63 +2,74 @@ Object = require("classic")
 
 local Font = require("Font")
 local Button = require("Button")
+local Story = require("story")
 
+local story
 local buttons
-local selected
+local choice
 local circle
-local cx
-local cy
 
 function love.load()
-	buttons = {
-		Button("This is a button", Font(50, 2, 0.2), 100),
-		Button("This is also a button", Font(50, 2, 0.2), 200),
-		Button("This is another button", Font(50, 2, 0.2), 300),
-	}
-
+	story = Story(1)
+	buttons = story:resume()
 end
 
 function love.mousepressed()
-	for i, v in ipairs(buttons) do
-		if v:hover() then
-			selected = v
-			circle = 0
-			cx = love.mouse.getX()
-			cy = love.mouse.getY()
+	for i, button in ipairs(buttons) do
+		if not circle and button:hover() then
+			choice = i
+			circle = {
+				timer = 0,
+				x = love.mouse.getX(),
+				y = love.mouse.getY()
+			}
 		end
 	end
 end
 
 function love.update(dt)
-	for i, v in ipairs(buttons) do
-		v:update(dt)
+	for i, button in ipairs(buttons) do
+		button:update(dt)
 	end
 
-	if selected then
-		circle = circle + dt * 2
-		if circle > 2 then
-			circle = 2
+	if circle then
+		circle.timer = circle.timer + dt * 2
+		if circle.timer > 2 then
+			buttons = story:resume(choice)
+			if not buttons then
+				story = Story(story.try + 1)
+				buttons = story:resume(choice)
+			end
+			circle = nil
 		end
 	end
 end
 
 function love.draw()
-	if selected then
+	if circle then
 		love.graphics.stencil(function()
-			love.graphics.ellipse("fill", cx, cy, circle * (2 - circle) * love.graphics.getWidth() / 2)
+			local size = 0
+			for i, button in ipairs(buttons) do
+				if button.width > size then
+					size = button.width
+				end
+			end
+
+			local t = circle.timer
+			love.graphics.ellipse("fill", circle.x, circle.y, t * (2 - t) * size)
 		end)
 		love.graphics.setStencilTest("equal", 0)
 	end
 
-	if not selected or circle < 1 then
-		for i, v in ipairs(buttons) do
-			v:draw()
+	if not circle or circle.timer < 1 then
+		for i, button in ipairs(buttons) do
+			button:draw()
 		end
 	end
 
-	if selected then
+	if circle and #buttons > 1 then
 		love.graphics.setStencilTest("equal", 1)
-		selected:draw()
+		buttons[choice]:draw()
 	end
 	love.graphics.setStencilTest()
 end
