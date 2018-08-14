@@ -18,23 +18,18 @@ function Font:new(size, offset, clock)
 		Font.sizes[size] = love.graphics.newFont("assets/IndieFlower.ttf", size)
 	end
 
-	self.size = size
 	self.font = Font.sizes[size]
-	self.seed = 0
 	self.offset = offset
 	self.clock = clock
-	self.time = 0
+	self.timer = clock
+	self.seed = 0
 end
 
-function Font:update()
-	local time = self.time + 1
-	if self.clock > 0 then
-		time = math.floor(love.timer.getTime() / self.clock)
-	end
-
-	if time > self.time then
-		self.seed = math.random()
-		self.time = time
+function Font:update(dt)
+	self.timer = self.timer + dt
+	if self.timer >= self.clock then
+		self.seed = love.math.random()
+		self.timer = 0
 	end
 end
 
