@@ -36,10 +36,6 @@ function love.update(dt)
 		circle.timer = circle.timer + dt * 2
 		if circle.timer > 2 then
 			buttons = story:resume(choice)
-			if not buttons then
-				story = Story(story.try + 1)
-				buttons = story:resume(choice)
-			end
 			circle = nil
 		end
 	end
